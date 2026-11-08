@@ -27,8 +27,8 @@ CONTAGENS = [
     ("28/10", "Quarta", "18:15–18:30", 978, 415, 24),
     ("29/10", "Quinta", "17:30–17:45", 823, 314, 13),
     ("29/10", "Quinta", "17:45–18:00", 840, 305, 10),
-    ("29/10", "Quinta", "18:00–18:15", None, None, None),
-    ("29/10", "Quinta", "18:15–18:30", None, None, None),
+    ("29/10", "Quinta", "18:00–18:15", 852, 364, 9),
+    ("29/10", "Quinta", "18:15–18:30", 886, 319, 11),
 ]
 
 # --------------------------------------------------------------------------
@@ -185,49 +185,41 @@ def svg_volume(rows):
 
 
 def svg_x(rows):
-    W, H, ml, mr, mt, mb = 820, 320, 52, 12, 14, 62
+    W, H, ml, mr, mt, mb = 820, 320, 52, 84, 14, 62
     pw, ph = W - ml - mr, H - mt - mb
     pos, n = _grupos(rows)
     unit = pw / n
-    ymin, ymax = 0.4, 1.2
+    bw = unit * 0.68
+    ymax = 1.2
 
     def Y(v):
-        return mt + ph - ph * (v - ymin) / (ymax - ymin)
+        return mt + ph - ph * v / ymax
 
     s = [f'<svg viewBox="0 0 {W} {H}" role="img" aria-label="Grau de saturação X por bloco">']
-    v = ymin
+    v = 0.0
     while v <= ymax + 1e-9:
         s.append(f'<line x1="{ml}" x2="{W - mr}" y1="{Y(v)}" y2="{Y(v)}" class="grid"/>')
-        s.append(f'<text x="{ml - 8}" y="{Y(v) + 4}" text-anchor="end" class="ax">{fmt(v, 1)}</text>')
+        s.append(f'<text x="{ml - 8}" y="{Y(v) + 4}" text-anchor="end" class="ax">{fmt(v, 2)}</text>')
         v += 0.2
-    s.append(f'<line x1="{ml}" x2="{W - mr}" y1="{Y(LIM_ALERTA)}" y2="{Y(LIM_ALERTA)}" class="ref-or"/>')
-    s.append(f'<text x="{W - mr - 4}" y="{Y(LIM_ALERTA) + 14}" text-anchor="end" class="ref-or-t">alerta 0,85</text>')
     s.append(f'<line x1="{ml}" x2="{W - mr}" y1="{Y(LIM_SATURA)}" y2="{Y(LIM_SATURA)}" class="ref-rd"/>')
-    s.append(f'<text x="{W - mr - 4}" y="{Y(LIM_SATURA) - 5}" text-anchor="end" class="ref-rd-t">capacidade (X = 1)</text>')
-    s.append(f'<text x="12" y="{mt + ph / 2}" transform="rotate(-90 12 {mt + ph / 2})" text-anchor="middle" class="ax">grau de saturação X</text>')
+    s.append(f'<text x="{W - 4}" y="{Y(LIM_SATURA) + 4}" text-anchor="end" class="ref-t">{fmt(LIM_SATURA, 2)} saturação</text>')
+    s.append(f'<line x1="{ml}" x2="{W - mr}" y1="{Y(LIM_ALERTA)}" y2="{Y(LIM_ALERTA)}" class="ref-or"/>')
+    s.append(f'<text x="{W - 4}" y="{Y(LIM_ALERTA) + 4}" text-anchor="end" class="ref-t">{fmt(LIM_ALERTA, 2)} atenção</text>')
     dia_x = {}
-    for serie, cls in (("x1", "ln-a"), ("x2", "ln-b")):
-        seg = []
-        for r, p in zip(rows, pos):
-            cx = ml + p * unit + unit / 2
-            if r["contado"]:
-                seg.append((cx, Y(r[serie]), r))
-            else:
-                seg.append(None)
-        # linhas só dentro do mesmo dia
-        for dia in dict.fromkeys(r["dia"] for r in rows):
-            pts = [q for q, r in zip(seg, rows) if r["dia"] == dia and q]
-            if len(pts) > 1:
-                d = " ".join(f"{x:.1f},{y:.1f}" for x, y, _ in pts)
-                s.append(f'<polyline points="{d}" class="{cls}"/>')
-        for q in seg:
-            if q:
-                x, y, r = q
-                s.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4.5" class="{cls}-pt"><title>{r["dia"]} {r["bloco"]}: X = {fmt(r[serie], 2)}</title></circle>')
     for r, p in zip(rows, pos):
-        cx = ml + p * unit + unit / 2
-        s.append(f'<text x="{cx:.1f}" y="{mt + ph + 15}" text-anchor="middle" class="ax">{r["bloco"][:5]}</text>')
-        dia_x.setdefault(r["dia"], []).append(cx)
+        x = ml + p * unit + (unit - bw) / 2
+        base = mt + ph
+        if r["contado"]:
+            cls = {"x-red": "bar-rd", "x-orange": "bar-or"}.get(classe_x(r["x1"]), "bar-ok")
+            hh = ph * r["x1"] / ymax
+            s.append(f'<rect x="{x:.1f}" y="{base - hh:.1f}" width="{bw:.1f}" height="{hh:.1f}" rx="2" class="{cls}"><title>{r["dia"]} {r["bloco"]}: X = {fmt(r["x1"], 2)} (fator menor), {fmt(r["x2"], 2)} (fator maior)</title></rect>')
+            ty = Y(r["x2"])
+            s.append(f'<line x1="{x - 3:.1f}" x2="{x + bw + 3:.1f}" y1="{ty:.1f}" y2="{ty:.1f}" class="tick"/>')
+        else:
+            s.append(f'<rect x="{x:.1f}" y="{base - 26}" width="{bw:.1f}" height="26" class="cell-no"/>')
+            s.append(f'<text x="{x + bw / 2:.1f}" y="{base - 9}" text-anchor="middle" class="ax">falta</text>')
+        s.append(f'<text x="{x + bw / 2:.1f}" y="{base + 15}" text-anchor="middle" class="ax">{r["bloco"][:5]}</text>')
+        dia_x.setdefault(r["dia"], []).append(x + bw / 2)
     for d, xs in dia_x.items():
         sem = next(r["sem"] for r in rows if r["dia"] == d)
         s.append(f'<text x="{sum(xs) / len(xs):.1f}" y="{mt + ph + 36}" text-anchor="middle" class="axb">{d} ({sem.lower()})</text>')
@@ -240,9 +232,10 @@ def svg_x(rows):
 # --------------------------------------------------------------------------
 CSS = """
 :root{--bg:#f6f7f9;--card:#fff;--tx:#1b1f24;--mut:#667085;--bd:#e3e6eb;--grid:#e8ebf0;
---car:#2f6fdb;--moto:#0e9aa7;--pes:#7a4fd6;--or:#d97706;--rd:#d92d20;--ok:#e6efff;--no:#f1f2f4;}
-@media (prefers-color-scheme:dark){:root{--bg:#0f1114;--card:#171a1f;--tx:#e8eaed;--mut:#9aa3b0;--bd:#2a2f37;--grid:#262b33;
---car:#6ea0ff;--moto:#3cc7d3;--pes:#a98bff;--or:#f59e0b;--rd:#ff6b5e;--ok:#1b2a45;--no:#20242b;}}
+--car:#338ced;--moto:#e76624;--pes:#00a888;--or:#e49c06;--rd:#dc3c3d;--or-tx:#b27600;--rd-tx:#c42b2c;
+--ok:#f3f4f6;--no:#f1f2f4;--ref:#9aa0a8;--tick:#555a61;}
+@media (prefers-color-scheme:dark){:root{--bg:#0b0b0b;--card:#1f1f1f;--tx:#efefef;--mut:#9b9b9b;--bd:#282828;--grid:#2b2b2b;
+--or-tx:#e49c06;--rd-tx:#dc3c3d;--ok:#0b0b0b;--no:#1f1f1f;--ref:#5a5a5a;--tick:#afafaf;}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
 .wrap{max-width:1000px;margin:0 auto;padding:24px 16px 48px}
 h1{font-size:22px;margin:0 0 4px}.sub{color:var(--mut);margin:0 0 18px}
@@ -258,10 +251,8 @@ svg{width:100%;height:auto;display:block}
 .ax{fill:var(--mut);font-size:12px}.axb{fill:var(--tx);font-size:12px;font-weight:600}.val{fill:var(--tx);font-size:11px}
 .grid{stroke:var(--grid)}.k-car{fill:var(--car)}.k-moto{fill:var(--moto)}.k-pes{fill:var(--pes)}
 .cell-ok{fill:var(--ok)}.cell-no{fill:var(--no);stroke:var(--bd);stroke-dasharray:4 3}.cell-t{fill:var(--tx);font-size:12px}
-.ref-or{stroke:var(--or);stroke-dasharray:5 4}.ref-rd{stroke:var(--rd);stroke-dasharray:5 4}
-.ref-or-t{fill:var(--or);font-size:11px}.ref-rd-t{fill:var(--rd);font-size:11px}
-.ln-a{fill:none;stroke:var(--car);stroke-width:2}.ln-a-pt{fill:var(--car)}
-.ln-b{fill:none;stroke:var(--moto);stroke-width:2;stroke-dasharray:6 4}.ln-b-pt{fill:var(--card);stroke:var(--moto);stroke-width:2}
+.ref-or{stroke:var(--or);stroke-dasharray:5 4}.ref-rd{stroke:var(--ref);stroke-dasharray:5 4}.ref-t{fill:var(--mut);font-size:11px}
+.bar-ok{fill:var(--car)}.bar-or{fill:var(--or)}.bar-rd{fill:var(--rd)}.tick{stroke:var(--tick);stroke-width:2.5}
 .leg{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--mut);margin-top:6px}
 .leg i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px}
 .filt{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
@@ -270,7 +261,7 @@ svg{width:100%;height:auto;display:block}
 .tw{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
 th,td{padding:8px 10px;border-bottom:1px solid var(--bd);text-align:right;white-space:nowrap}
 th{color:var(--mut);font-weight:500;font-size:13px}th:nth-child(-n+2),td:nth-child(-n+2),th:last-child,td:last-child{text-align:left}
-.x-orange{color:var(--or);font-weight:600}.x-red{color:var(--rd);font-weight:600}.falta{color:var(--mut)}
+.x-orange{color:var(--or-tx);font-weight:600}.x-red{color:var(--rd-tx);font-weight:600}.falta{color:var(--mut)}
 details{margin-top:8px}summary{cursor:pointer;color:var(--mut)}
 .par td:first-child,.par th:first-child{text-align:left}.par td,.par th{text-align:left}
 .note{color:var(--mut);font-size:13px}code{background:var(--no);padding:1px 5px;border-radius:4px}
@@ -306,10 +297,12 @@ def pagina():
 </div>"""
 
     leg_vol = ('<div class="leg"><span><i style="background:var(--car)"></i>Automóveis</span>'
-               '<span><i style="background:var(--moto)"></i>Motos</span>'
-               '<span><i style="background:var(--pes)"></i>Pesados (ônibus + caminhões)</span></div>')
-    leg_x = (f'<div class="leg"><span><i style="background:var(--car)"></i>Fator de moto {fmt(p["fator_moto_menor"], 2)} (linha cheia)</span>'
-             f'<span><i style="background:var(--moto)"></i>Fator de moto {fmt(p["fator_moto_maior"], 2)} (tracejada)</span></div>')
+               '<span><i style="background:var(--moto)"></i>Motocicletas</span>'
+               '<span><i style="background:var(--pes)"></i>Ônibus e caminhões</span></div>')
+    leg_x = (f'<div class="leg"><span><i style="background:var(--car)"></i>X com fator de moto {fmt(p["fator_moto_menor"], 2)}</span>'
+             f'<span><i style="background:var(--or)"></i>entre {fmt(LIM_ALERTA, 2)} e {fmt(LIM_SATURA, 2)}</span>'
+             f'<span><i style="background:var(--rd)"></i>acima de {fmt(LIM_SATURA, 2)}</span>'
+             f'<span><i style="background:var(--tick);height:3px;width:14px;border-radius:0;vertical-align:3px"></i>com fator de moto {fmt(p["fator_moto_maior"], 2)}</span></div>')
 
     visao = f"""
 {kpis}
