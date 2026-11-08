@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Gera o painel do TCC (abas Visão geral e Contagens) como uma página index.html.
+"""Gera o painel do TCC (abas Visão geral, Contagens e Documentos) como uma página index.html.
 
 Uso:
     python gerar_painel.py          # cria/atualiza index.html na mesma pasta
@@ -53,6 +53,49 @@ TITULO = "Painel do TCC: Avenida Carlos Cunha, sentido Centro"
 SUBTITULO = ("Contagem classificada por vídeo, blocos de 15 min, 17:30–18:30, "
              "referência no cruzamento do São Luís Shopping")
 
+
+# --------------------------------------------------------------------------
+# DOCUMENTOS: fichas da contagem manual, escaneadas em PDF (pasta documentos/)
+# (dia, dia da semana, arquivo). Cada PDF tem uma página por bloco de 15 min.
+# --------------------------------------------------------------------------
+DOCUMENTOS = [
+    ("27/10", "Terça", "documentos/Contagem dia 27 de outubro.pdf"),
+    ("28/10", "Quarta", "documentos/Contagem dia 28 de outubro.pdf"),
+    ("29/10", "Quinta", "documentos/Contagem dia 29 de outubro.pdf"),
+]
+LOCAL = "Avenida Prof. Carlos Cunha, sentido Centro"
+PESQUISADOR = "Alessandro França Ramos"
+
+
+def secao_documentos():
+    """Aba Documentos: lista das fichas escaneadas e visualizador do PDF."""
+    from urllib.parse import quote
+    itens = []
+    for i, (dia, sem, arq) in enumerate(DOCUMENTOS):
+        url = escape(quote(arq))
+        tit = f"Contagem de {dia} ({sem.lower()})"
+        blocos = [r for r in CONTAGENS if r[0] == dia]
+        total = sum(c + m + h for _, _, _, c, m, h in blocos if c is not None)
+        meta = f"{len(blocos)} blocos de 15 min"
+        if blocos:
+            meta += f", {blocos[0][2][:5]}–{blocos[-1][2][-5:]}"
+        if total:
+            meta += f" · {fmt(total)} veículos"
+        itens.append(
+            f'<li class="doc"><div><div class="doc-t">{escape(tit)}</div><div class="doc-m">{meta}</div></div>'
+            f'<div class="doc-a"><button class="btn" data-doc="{url}" data-t="{escape(tit)}" '
+            f'aria-pressed="{"true" if i == 0 else "false"}">Ver aqui</button>'
+            f'<a class="btn" href="{url}" target="_blank" rel="noopener">Abrir</a>'
+            f'<a class="btn" href="{url}" download>Baixar</a></div></li>')
+    return f"""
+<div class="card"><h2>Fichas da contagem manual</h2>
+<p class="cap">Fichas preenchidas à mão durante a contagem pelos vídeos, escaneadas em PDF. Cada página é um bloco de 15 minutos, com local, pesquisador, data, horário do bloco e a marcação de cada veículo (automóveis, motos e pesados).</p>
+<div class="meta"><div><b>Local</b>{escape(LOCAL)}</div><div><b>Pesquisador</b>{escape(PESQUISADOR)}</div></div>
+<ul class="docs">{"".join(itens)}</ul></div>
+<div class="card"><h2 id="doc-tit">Visualização</h2>
+<p class="cap">Se o PDF não aparecer abaixo (comum no celular), use Abrir ou Baixar.</p>
+<iframe class="viewer" id="doc-view" title="Ficha de contagem em PDF"></iframe></div>
+"""
 
 # --------------------------------------------------------------------------
 # Cálculos
@@ -265,6 +308,14 @@ th{color:var(--mut);font-weight:500;font-size:13px}th:nth-child(-n+2),td:nth-chi
 details{margin-top:8px}summary{cursor:pointer;color:var(--mut)}
 .par td:first-child,.par th:first-child{text-align:left}.par td,.par th{text-align:left}
 .note{color:var(--mut);font-size:13px}code{background:var(--no);padding:1px 5px;border-radius:4px}
+.docs{list-style:none;margin:12px 0 0;padding:0}
+.doc{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;border-top:1px solid var(--bd)}
+.doc-t{font-weight:600}.doc-m{color:var(--mut);font-size:13px}.doc-a{display:flex;gap:6px;flex-wrap:wrap}
+.btn{border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:999px;padding:5px 12px;font:inherit;font-size:13px;cursor:pointer;text-decoration:none}
+.btn[aria-pressed=true]{background:var(--car);border-color:var(--car);color:#fff}
+.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px 16px;font-size:14px}
+.meta b{display:block;color:var(--mut);font-weight:500;font-size:13px}
+.viewer{display:block;width:100%;height:80vh;min-height:460px;border:1px solid var(--bd);border-radius:8px;background:var(--no)}
 """
 
 JS = """
@@ -275,6 +326,11 @@ tabs.forEach(t=>t.addEventListener('click',()=>abrir(t.dataset.p)));
 const chips=[...document.querySelectorAll('.chip')],linhas=[...document.querySelectorAll('#tb tr')];
 chips.forEach(c=>c.addEventListener('click',()=>{chips.forEach(o=>o.setAttribute('aria-pressed',o===c));
 linhas.forEach(l=>l.hidden=c.dataset.d!=='todos'&&l.dataset.d!==c.dataset.d);}));
+const dbtn=[...document.querySelectorAll('.btn[data-doc]')],dview=document.getElementById('doc-view'),dtit=document.getElementById('doc-tit');
+function verDoc(b){dbtn.forEach(o=>o.setAttribute('aria-pressed',o===b));dview.src=b.dataset.doc;dtit.textContent=b.dataset.t;}
+dbtn.forEach(b=>b.addEventListener('click',()=>verDoc(b)));
+tabs.forEach(t=>t.addEventListener('click',()=>{if(t.dataset.p==='documentos'&&dview&&!dview.getAttribute('src')&&dbtn.length)
+verDoc(dbtn.find(b=>b.getAttribute('aria-pressed')==='true')||dbtn[0]);}));
 """
 
 
@@ -364,9 +420,11 @@ Os fatores de equivalência e o fluxo de saturação ainda serão definidos com 
 <h1>{escape(TITULO)}</h1><p class="sub">{escape(SUBTITULO)}</p>
 <div class="tabs" role="tablist">
 <button class="tab" role="tab" data-p="visao" aria-selected="true">Visão geral</button>
-<button class="tab" role="tab" data-p="contagens" aria-selected="false">Contagens</button></div>
+<button class="tab" role="tab" data-p="contagens" aria-selected="false">Contagens</button>
+<button class="tab" role="tab" data-p="documentos" aria-selected="false">Documentos</button></div>
 <section class="panel" id="visao">{visao}</section>
 <section class="panel" id="contagens" hidden>{contagens}</section>
+<section class="panel" id="documentos" hidden>{secao_documentos()}</section>
 {rodape}
 </div><script>{JS}</script></body></html>"""
 
