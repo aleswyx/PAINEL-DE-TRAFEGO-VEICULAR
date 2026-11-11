@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Gera o painel do TCC (abas Visão geral, Contagens e Documentos) como uma página index.html.
+"""Gera o painel do TCC (abas Visão geral, Contagens, Simulação e Documentos) como uma página index.html.
 
 Uso:
     python gerar_painel.py          # cria/atualiza index.html na mesma pasta
@@ -95,6 +95,39 @@ def secao_documentos():
 <div class="card"><h2 id="doc-tit">Visualização</h2>
 <p class="cap">Se o PDF não aparecer abaixo (comum no celular), use Abrir ou Baixar.</p>
 <iframe class="viewer" id="doc-view" title="Ficha de contagem em PDF"></iframe></div>
+"""
+
+# --------------------------------------------------------------------------
+# SIMULAÇÃO NO VISSIM (dia 28/10, sentido Centro, só a faixa marcada no modelo)
+# (cenário, verde SG2 em s, bloco, demanda em veíc./h, fila média em m, fila máxima em m,
+#  paradas na fila, atraso em s/veíc., paradas por veículo, velocidade em km/h)
+# Médias de 10 rodadas (sementes 42 a 51), medidas de 148 s a 600 s. None = não registrado.
+# --------------------------------------------------------------------------
+SIMULACAO = [
+("C0 – plano atual", 125, "17:30–17:45", 4796, 42.0, 255.5, 234, None, None, None),
+("C0 – plano atual", 125, "17:45–18:00", 5212, 48.7, 264.0, 243, None, None, None),
+("C0 – plano atual", 125, "18:00–18:15", 5888, 44.4, 255.2, 238, 8.64, 0.37, 47.78),
+("C0 – plano atual", 125, "18:15–18:30", 5668, 52.6, 296.7, 245, 8.65, 0.38, 47.81),
+("C1 – verde +6 s", 131, "18:00–18:15", 5888, 19.9, 179.1, 149, 4.77, 0.22, 53.41),
+("C1 – verde +6 s", 131, "18:15–18:30", 5668, 19.6, 177.2, 147, 4.82, 0.22, 53.33),
+("C2 – verde +12 s", 137, "18:00–18:15", 5888, 4.0, 76.4, 61, 2.35, 0.07, 57.51),
+("C2 – verde +12 s", 137, "18:15–18:30", 5668, 4.8, 87.7, 65, 2.4, 0.07, 57.42),
+]
+
+def secao_simulacao():
+    """Aba Simulação: resultados do Vissim por cenário de semáforo e bloco."""
+    def c(v, casas=0):
+        return "—" if v is None else fmt(v, casas)
+    linhas_sim = "".join(
+        f"<tr><td>{escape(cen)}</td><td>{c(v)}</td><td>{escape(bl)}</td><td>{c(q)}</td>"
+        f"<td>{c(fm, 1)}</td><td>{c(fx, 1)}</td><td>{c(pa)}</td><td>{c(at, 1)}</td><td>{c(pv, 2)}</td><td>{c(ve, 1)}</td></tr>"
+        for cen, v, bl, q, fm, fx, pa, at, pv, ve in SIMULACAO)
+    return f"""
+<div class="card"><h2>Simulação no Vissim</h2>
+<p class="cap">Dia 28/10, sentido Centro, só a faixa marcada no modelo. Cada bloco de 15 minutos foi simulado separadamente, com 10 rodadas (sementes 42 a 51), medindo de 148 s a 600 s. Médias das rodadas.</p>
+<div class="tw"><table class="sim"><thead><tr><th>Cenário</th><th>Verde (s)</th><th>Bloco</th><th>Demanda (veíc./h)</th><th>Fila média (m)</th><th>Fila máxima (m)</th><th>Paradas na fila</th><th>Atraso (s/veíc.)</th><th>Paradas por veíc.</th><th>Velocidade (km/h)</th></tr></thead>
+<tbody>{linhas_sim}</tbody></table></div>
+<p class="note">Limites: o Vissim Student encerra cada rodada em 600 s, então a medição cobre cerca de 3 ciclos (o primeiro é descartado). A fila máxima chega perto de 320 m, limite do contador. Motos entram como veículos de uma faixa só, sem circular entre carros. Nos blocos 1 e 2 do plano atual só a fila foi registrada; atraso e velocidade ficam em branco. Nos cenários C1 e C2 só a fase do sentido Centro mudou (o verde dos outros movimentos não foi deslocado).</p></div>
 """
 
 # --------------------------------------------------------------------------
@@ -308,6 +341,7 @@ th{color:var(--mut);font-weight:500;font-size:13px}th:nth-child(-n+2),td:nth-chi
 details{margin-top:8px}summary{cursor:pointer;color:var(--mut)}
 .par td:first-child,.par th:first-child{text-align:left}.par td,.par th{text-align:left}
 .note{color:var(--mut);font-size:13px}code{background:var(--no);padding:1px 5px;border-radius:4px}
+.sim th:nth-child(3),.sim td:nth-child(3){text-align:left}.sim th:last-child,.sim td:last-child{text-align:right}
 .docs{list-style:none;margin:12px 0 0;padding:0}
 .doc{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;border-top:1px solid var(--bd)}
 .doc-t{font-weight:600}.doc-m{color:var(--mut);font-size:13px}.doc-a{display:flex;gap:6px;flex-wrap:wrap}
@@ -421,9 +455,11 @@ Os fatores de equivalência e o fluxo de saturação ainda serão definidos com 
 <div class="tabs" role="tablist">
 <button class="tab" role="tab" data-p="visao" aria-selected="true">Visão geral</button>
 <button class="tab" role="tab" data-p="contagens" aria-selected="false">Contagens</button>
+<button class="tab" role="tab" data-p="simulacao" aria-selected="false">Simulação</button>
 <button class="tab" role="tab" data-p="documentos" aria-selected="false">Documentos</button></div>
 <section class="panel" id="visao">{visao}</section>
 <section class="panel" id="contagens" hidden>{contagens}</section>
+<section class="panel" id="simulacao" hidden>{secao_simulacao()}</section>
 <section class="panel" id="documentos" hidden>{secao_documentos()}</section>
 {rodape}
 </div><script>{JS}</script></body></html>"""
