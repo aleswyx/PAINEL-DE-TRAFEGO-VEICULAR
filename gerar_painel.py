@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Gera o painel do TCC (abas Visão geral, Contagens, Simulação e Documentos) como uma página index.html.
+"""Gera o painel do TCC (abas Visão geral, Contagens, Erro da contagem, Simulação e Documentos) como uma página index.html.
 
 Uso:
     python gerar_painel.py          # cria/atualiza index.html na mesma pasta
@@ -368,7 +368,93 @@ verDoc(dbtn.find(b=>b.getAttribute('aria-pressed')==='true')||dbtn[0]);}));
 """
 
 
+# --------------------------------------------------------------------------
+# ERRO DA CONTAGEM (recontagem nos vídeos x folha de campo, bloco 28/10 17:30–17:45)
+# C1 = folha de campo (576 carros, 232 motos, 9 pesados); C2 = soma de 5 trechos de 3 min recontados.
+# Erro = |C1 − C2| / C2 × 100. Trechos de 27/10 e 29/10 não têm C1 por trecho (só ordem de grandeza).
+# --------------------------------------------------------------------------
+# Dados da recontagem (3 min) e erro; tudo calculado aqui
+C1 = {"carros":576,"motos":232,"pesados":9}
+TRECHOS = [  # dia, trecho, carros, motos, pesados, comparavel
+ ("27/10","17:57–18:00",94,49,4,False),
+ ("28/10","17:30–17:33",111,33,1,True),
+ ("28/10","17:33–17:36",99,41,2,True),
+ ("28/10","17:36–17:39",108,35,1,True),
+ ("28/10","17:39–17:42",104,49,1,True),
+ ("28/10","17:42–17:45",132,55,5,True),
+ ("29/10","18:15–18:18",138,50,4,False),
+]
+C2={k:sum(t[i] for t in TRECHOS if t[5]) for k,i in (("carros",2),("motos",3),("pesados",4))}
+def f1(v): return f"{v:.1f}".replace(".",",")
+def f0(v): return f"{v:,.0f}".replace(",",".")
+def err(a,b): return abs(a-b)/b*100
+E_cls={k:err(C1[k],C2[k]) for k in C1}
+T1=sum(C1.values()); T2=sum(C2.values()); E_tot=err(T1,T2)
+antigo=(806+384+9)
+E_ant=err(antigo,T2)
+
+def table(head, rows, cls_first_left=2, th_cls=None):
+    h="".join(f'<th class="l">{c}</th>' if i<cls_first_left else f'<th>{c}</th>' for i,c in enumerate(head))
+    b=""
+    for r in rows:
+        tds="".join((f'<td class="l">{c}</td>' if i<cls_first_left else f'<td>{c}</td>') for i,c in enumerate(r))
+        b+=f"<tr>{tds}</tr>"
+    return f'<table><thead><tr>{h}</tr></thead><tbody>{b}</tbody></table>'
+
+nomes={"carros":"Automóveis","motos":"Motos","pesados":"Pesados"}
+resumo=[(nomes[k],f0(C1[k]),f0(C2[k]),f"{C1[k]-C2[k]:+d}".replace("-","−"),f1(E_cls[k])+"%") for k in C1]
+resumo.append(("<b>Total</b>",f"<b>{f0(T1)}</b>",f"<b>{f0(T2)}</b>",f"<b>{T1-T2:+d}</b>",f"<b>{f1(E_tot)}%</b>"))
+tr_rows=[]
+for d,t,c,m,p,ok in TRECHOS:
+    tr_rows.append((d,t,f0(c),f0(m),f0(p),f0(c+m+p),"Sim, soma o bloco 17:30–17:45" if ok else "Não: sem C1 por trecho"))
+tr_rows.append(("<b>28/10</b>","<b>17:30–17:45 (5 trechos)</b>",f"<b>{C2['carros']}</b>",f"<b>{C2['motos']}</b>",f"<b>{C2['pesados']}</b>",f"<b>{T2}</b>","<b>C2 do bloco</b>"))
+
+cmp_rows=[("Folha antiga (806/384)",f0(806),f0(384),"9",f0(antigo),f1(E_ant)+"%"),
+          ("Folha correta (576/232)",f0(576),f0(232),"9",f0(T1),f1(E_tot)+"%")]
+
+def conteudo(estilo):
+    # estilo 'art' (painel Claude) ou 'gh' (site GitHub)
+    if estilo=="art":
+        card=lambda t,sub,body: f'<div class="tc-card"><header><h2>{t}</h2><p class="tc-sub">{sub}</p></header>{body}</div>'
+        scroll=lambda x: f'<div class="tc-scroll">{x}</div>'
+        kpi=lambda lab,val,sub: f'<div class="tc-kpi"><span class="lab">{lab}</span><b class="val">{val}</b><span class="sub">{sub}</span></div>'
+        kpis=lambda x: f'<div class="tc-kpis">{x}</div>'
+        note=lambda x: f'<p class="tc-sub">{x}</p>'
+        grid2=lambda x: f'<div class="tc-grid2">{x}</div>'
+    else:
+        card=lambda t,sub,body: f'<div class="card"><h2>{t}</h2><p class="cap">{sub}</p>{body}</div>'
+        scroll=lambda x: f'<div class="tw">{x}</div>'
+        kpi=lambda lab,val,sub: f'<div class="card kpi"><div class="n">{val}</div><div class="l">{lab}. {sub}</div></div>'
+        kpis=lambda x: f'<div class="kpis">{x}</div>'
+        note=lambda x: f'<p class="note">{x}</p>'
+        grid2=lambda x: x
+    sub_k=f"{f0(T1)} na folha contra {f0(T2)} na recontagem"
+    visao_kpis=kpis(
+        kpi("Erro total da contagem",f1(E_tot)+"%",sub_k)+
+        kpi("Automóveis",f1(E_cls['carros'])+"%",f"{C1['carros']} contra {C2['carros']}")+
+        kpi("Motos",f1(E_cls['motos'])+"%",f"{C1['motos']} contra {C2['motos']}")+
+        kpi("Pesados",f1(E_cls['pesados'])+"%",f"{C1['pesados']} contra {C2['pesados']}: um veículo de diferença"))
+    visao=card("Erro da contagem","Contagem original (folha) comparada com a recontagem nos vídeos, no bloco 28/10 17:30–17:45",
+        visao_kpis+note("Erro = |C1 − C2| ÷ C2 × 100, com C1 da folha e C2 da recontagem. Só esse bloco tem as duas contagens comparáveis. Detalhes na aba Erro da contagem."))
+    eq=note("Fórmula do TCC: E (%) = |C1 − C2| ÷ C2 × 100, com C1 = contagem original (folha de campo) e C2 = recontagem nos vídeos.")
+    sec1=card("Resultado por classe","Bloco 28/10, 17:30–17:45 (único bloco com C1 e C2 comparáveis)",
+        scroll(table(["Classe","C1: folha","C2: recontagem","Diferença (C1 − C2)","Erro"],resumo,1))+eq+
+        note("O total usa a diferença líquida (817 − 777 = 40). Somando as diferenças de cada classe (22 + 19 + 1 = 42) o valor seria 5,4%; o TCC usa a diferença líquida, que segue a fórmula aplicada ao total."))
+    sec2=card("Recontagem por trecho de 3 minutos","Cada trecho foi recontado nos vídeos em câmera lenta",
+        scroll(table(["Dia","Trecho","Automóveis","Motos","Pesados","Total","Entra no erro?"],tr_rows,2))+
+        note("A contagem original foi anotada por bloco de 15 minutos, então só o bloco 28/10 17:30–17:45 (5 trechos seguidos) pode ser comparado. Os trechos de 27/10 e 29/10 não têm C1 e servem só como ordem de grandeza."))
+    sec3=card("Correção da folha do bloco 28/10 17:30","Por que o erro caiu de 54,3% para 5,1%",
+        scroll(table(["Folha","Automóveis","Motos","Pesados","Total","Erro contra C2 (777)"],cmp_rows,1))+
+        note("A primeira comparação usou 806 carros e 384 motos, e o erro dava 54,3%. A folha de campo correta tem 576 carros, 232 motos e 9 pesados (817 veículos), e o erro cai para 5,1%. Todos os números do painel, do TCC e das planilhas usam a folha correta."))
+    sec4=card("Como o trecho foi escolhido","Sorteio com semente fixa, para poder repetir",
+        note("Foram sorteados 20 trechos de 3 minutos por hora, 1 por dia, com semente 20261115 e sem repetir o trecho já recontado (28/10, 18:00–18:15). Cada dia recebeu um trecho. No dia 28, o trecho sorteado foi estendido para todo o bloco 17:30–17:45 para poder comparar com a folha."))
+    sec5=card("Como ler o resultado","Limites da comparação",
+        note("O erro mede a diferença entre duas contagens e não diz qual das duas é a verdadeira. É um bloco só, e a diferença de pesados (1 veículo) pesa pouco. Em ordem de grandeza, um erro de 5,1% no fluxo muda o grau de saturação X do bloco 17:30 de 0,56 para algo entre 0,53 e 0,59, e o X da hora de 28/10 de 0,86 para algo entre 0,82 e 0,91 (fator de moto 0,33). Em nenhum desses casos o X ultrapassa 1."))
+    return visao, sec1+sec2+sec3+sec4+sec5
+
+
 def pagina():
+    ERRO_VISAO, ERRO_ABA = conteudo("gh")
     rows = linhas()
     cont = [r for r in rows if r["contado"]]
     p = PARAMETROS
@@ -455,10 +541,12 @@ Os fatores de equivalência e o fluxo de saturação ainda serão definidos com 
 <div class="tabs" role="tablist">
 <button class="tab" role="tab" data-p="visao" aria-selected="true">Visão geral</button>
 <button class="tab" role="tab" data-p="contagens" aria-selected="false">Contagens</button>
+<button class="tab" role="tab" data-p="erro" aria-selected="false">Erro da contagem</button>
 <button class="tab" role="tab" data-p="simulacao" aria-selected="false">Simulação</button>
 <button class="tab" role="tab" data-p="documentos" aria-selected="false">Documentos</button></div>
-<section class="panel" id="visao">{visao}</section>
+<section class="panel" id="visao">{visao}{ERRO_VISAO}</section>
 <section class="panel" id="contagens" hidden>{contagens}</section>
+<section class="panel" id="erro" hidden>{ERRO_ABA}</section>
 <section class="panel" id="simulacao" hidden>{secao_simulacao()}</section>
 <section class="panel" id="documentos" hidden>{secao_documentos()}</section>
 {rodape}
