@@ -412,6 +412,49 @@ tr_rows.append(("<b>28/10</b>","<b>17:30–17:45 (5 trechos)</b>",f"<b>{C2['carr
 cmp_rows=[("Folha antiga (806/384)",f0(806),f0(384),"9",f0(antigo),f1(E_ant)+"%"),
           ("Folha correta (576/232)",f0(576),f0(232),"9",f0(T1),f1(E_tot)+"%")]
 
+
+def graficos(estilo):
+    if estilo=="art":
+        tx="var(--color-fg)"; mu="var(--color-fg-muted)"; a="var(--color-fg-muted)"; b="var(--color-fg)"; hi="var(--color-warn)"; grid="var(--color-border-line)"
+        wrap=lambda t,sub,svg,leg: f'<div class="tc-card"><header><h2>{t}</h2><p class="tc-sub">{sub}</p></header><div class="tc-legend">{leg}</div><div class="tc-chart">{svg}</div></div>'
+        sw=lambda c,n: f'<span><i style="background:{c}"></i>{n}</span>'
+        outer=lambda x: f'<div class="tc-grid2">{x}</div>'
+    else:
+        tx="var(--tx)"; mu="var(--mut)"; a="var(--ref)"; b="var(--car)"; hi="var(--or)"; grid="var(--grid)"
+        wrap=lambda t,sub,svg,leg: f'<div class="card"><h2>{t}</h2><p class="cap">{sub}</p>{svg}<div class="leg">{leg}</div></div>'
+        sw=lambda c,n: f'<span><i style="background:{c}"></i>{n}</span>'
+        outer=lambda x: x
+    # grafico 1: erro por classe
+    nomes=[("Automóveis","carros"),("Motos","motos"),("Pesados","pesados")]
+    linhas=[(n,E_cls[k],f"{C1[k]} × {C2[k]}") for n,k in nomes]+[("Total",E_tot,f"{T1} × {T2}")]
+    sc=30.0  # px por 1%
+    s1=f'<svg viewBox="0 0 560 230" role="img" aria-label="Erro percentual por classe e no total" style="width:100%;height:auto;display:block;font-family:inherit">'
+    for g in (0,5,10):
+        x=130+g*sc
+        s1+=f'<line x1="{x}" x2="{x}" y1="14" y2="196" stroke="{grid}"/><text x="{x}" y="214" text-anchor="middle" font-size="11" fill="{mu}">{g}%</text>'
+    for i,(n,e,sub) in enumerate(linhas):
+        y=24+i*44; col=hi if n=="Total" else b
+        s1+=f'<text x="0" y="{y+17}" font-size="12" fill="{tx}" font-weight="{600 if n=="Total" else 400}">{n}</text>'
+        s1+=f'<rect x="130" y="{y}" width="{e*sc:.1f}" height="26" rx="3" fill="{col}"><title>{n}: {f1(e)}% (folha × recontagem: {sub})</title></rect>'
+        s1+=f'<text x="{130+e*sc+8:.1f}" y="{y+17}" font-size="12" fill="{tx}">{f1(e)}%  <tspan fill="{mu}">({sub})</tspan></text>'
+    s1+='</svg>'
+    g1=wrap("Erro por classe","Erro = |C1 − C2| ÷ C2; entre parênteses, folha × recontagem",s1,sw(b,"Classe")+sw(hi,"Total do bloco"))
+    # grafico 2: C1 x C2
+    s2=f'<svg viewBox="0 0 560 230" role="img" aria-label="Folha e recontagem por classe" style="width:100%;height:auto;display:block;font-family:inherit">'
+    H=150.0; mx=600.0
+    for g in (0,200,400,600):
+        y=190-g/mx*H
+        s2+=f'<line x1="40" x2="548" y1="{y:.1f}" y2="{y:.1f}" stroke="{grid}"/><text x="34" y="{y+4:.1f}" text-anchor="end" font-size="11" fill="{mu}">{g}</text>'
+    for i,(n,k) in enumerate(nomes):
+        gx=70+i*165
+        for j,(v,col,lab) in enumerate(((C1[k],a,"folha"),(C2[k],b,"recontagem"))):
+            h=v/mx*H; x=gx+j*62
+            s2+=f'<rect x="{x}" y="{190-h:.1f}" width="52" height="{max(h,1.5):.1f}" rx="3" fill="{col}"><title>{n}, {lab}: {v}</title></rect><text x="{x+26}" y="{190-h-6:.1f}" text-anchor="middle" font-size="12" fill="{tx}">{v}</text>'
+        s2+=f'<text x="{gx+57}" y="212" text-anchor="middle" font-size="12" fill="{tx}">{n}</text>'
+    s2+='</svg>'
+    g2=wrap("Folha × recontagem","Veículos no bloco 28/10 17:30–17:45, por classe",s2,sw(a,"C1: folha")+sw(b,"C2: recontagem"))
+    return outer(g1+g2)
+
 def conteudo(estilo):
     # estilo 'art' (painel Claude) ou 'gh' (site GitHub)
     if estilo=="art":
@@ -435,7 +478,7 @@ def conteudo(estilo):
         kpi("Motos",f1(E_cls['motos'])+"%",f"{C1['motos']} contra {C2['motos']}")+
         kpi("Pesados",f1(E_cls['pesados'])+"%",f"{C1['pesados']} contra {C2['pesados']}: um veículo de diferença"))
     visao=card("Erro da contagem","Contagem original (folha) comparada com a recontagem nos vídeos, no bloco 28/10 17:30–17:45",
-        visao_kpis+note("Erro = |C1 − C2| ÷ C2 × 100, com C1 da folha e C2 da recontagem. Só esse bloco tem as duas contagens comparáveis. Detalhes na aba Erro da contagem."))
+        visao_kpis+graficos(estilo)+note("Erro = |C1 − C2| ÷ C2 × 100, com C1 da folha e C2 da recontagem. Só esse bloco tem as duas contagens comparáveis. Detalhes na aba Erro da contagem."))
     eq=note("Fórmula do TCC: E (%) = |C1 − C2| ÷ C2 × 100, com C1 = contagem original (folha de campo) e C2 = recontagem nos vídeos.")
     sec1=card("Resultado por classe","Bloco 28/10, 17:30–17:45 (único bloco com C1 e C2 comparáveis)",
         scroll(table(["Classe","C1: folha","C2: recontagem","Diferença (C1 − C2)","Erro"],resumo,1))+eq+
