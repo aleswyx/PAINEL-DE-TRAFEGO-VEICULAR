@@ -127,7 +127,7 @@ def secao_simulacao():
 <p class="cap">Dia 28/10, sentido Centro, só a faixa marcada no modelo. Cada bloco de 15 minutos foi simulado separadamente, com 10 rodadas (sementes 42 a 51), medindo de 148 s a 600 s. Médias das rodadas.</p>
 <div class="tw"><table class="sim"><thead><tr><th>Cenário</th><th>Verde (s)</th><th>Bloco</th><th>Demanda (veíc./h)</th><th>Fila média (m)</th><th>Fila máxima (m)</th><th>Paradas na fila</th><th>Atraso (s/veíc.)</th><th>Paradas por veíc.</th><th>Velocidade (km/h)</th></tr></thead>
 <tbody>{linhas_sim}</tbody></table></div>
-<p class="note">Limites: o Vissim Student encerra cada rodada em 600 s, então a medição cobre cerca de 3 ciclos (o primeiro é descartado). A fila máxima chega perto de 320 m, limite do contador. Motos entram como veículos de uma faixa só, sem circular entre carros. *O bloco 17:30–17:45 do plano atual foi simulado com a contagem antiga (4.796 veíc./h); com a contagem corrigida a demanda é 3.268 veíc./h, então esse bloco precisa ser simulado de novo. Nos blocos 1 e 2 do plano atual só a fila foi registrada; atraso e velocidade ficam em branco. Nos cenários C1 e C2 só a fase do sentido Centro mudou (o verde dos outros movimentos não foi deslocado).</p></div>
+<p class="note">Limites: o Vissim Student encerra cada rodada em 600 s, então a medição cobre cerca de 3 ciclos (o primeiro é descartado). A fila máxima chega perto de 320 m, limite do contador. Motos entram como veículos de uma faixa só, sem circular entre carros. *O bloco 17:30–17:45 do plano atual foi simulado com demanda de 4.796 veíc./h; com a contagem conferida a demanda é 3.268 veíc./h, então esse bloco precisa ser simulado de novo. Nos blocos 1 e 2 do plano atual só a fila foi registrada; atraso e velocidade ficam em branco. Nos cenários C1 e C2 só a fase do sentido Centro mudou (o verde dos outros movimentos não foi deslocado).</p></div>
 """
 
 # --------------------------------------------------------------------------
@@ -390,8 +390,6 @@ def f0(v): return f"{v:,.0f}".replace(",",".")
 def err(a,b): return abs(a-b)/b*100
 E_cls={k:err(C1[k],C2[k]) for k in C1}
 T1=sum(C1.values()); T2=sum(C2.values()); E_tot=err(T1,T2)
-antigo=(806+384+9)
-E_ant=err(antigo,T2)
 
 def table(head, rows, cls_first_left=2, th_cls=None):
     h="".join(f'<th class="l">{c}</th>' if i<cls_first_left else f'<th>{c}</th>' for i,c in enumerate(head))
@@ -409,51 +407,31 @@ for d,t,c,m,p,ok in TRECHOS:
     tr_rows.append((d,t,f0(c),f0(m),f0(p),f0(c+m+p),"Sim, soma o bloco 17:30–17:45" if ok else "Não: sem C1 por trecho"))
 tr_rows.append(("<b>28/10</b>","<b>17:30–17:45 (5 trechos)</b>",f"<b>{C2['carros']}</b>",f"<b>{C2['motos']}</b>",f"<b>{C2['pesados']}</b>",f"<b>{T2}</b>","<b>C2 do bloco</b>"))
 
-cmp_rows=[("Folha antiga (806/384)",f0(806),f0(384),"9",f0(antigo),f1(E_ant)+"%"),
-          ("Folha correta (576/232)",f0(576),f0(232),"9",f0(T1),f1(E_tot)+"%")]
 
 
 def graficos(estilo):
     if estilo=="art":
-        tx="var(--color-fg)"; mu="var(--color-fg-muted)"; a="var(--color-fg-muted)"; b="var(--color-fg)"; hi="var(--color-warn)"; grid="var(--color-border-line)"
-        wrap=lambda t,sub,svg,leg: f'<div class="tc-card"><header><h2>{t}</h2><p class="tc-sub">{sub}</p></header><div class="tc-legend">{leg}</div><div class="tc-chart">{svg}</div></div>'
-        sw=lambda c,n: f'<span><i style="background:{c}"></i>{n}</span>'
-        outer=lambda x: f'<div class="tc-grid2">{x}</div>'
+        tx="var(--color-fg)"; mu="var(--color-fg-muted)"; grid="var(--color-border-line)"
+        wrap=lambda svg,leg: f'<div class="tc-legend">{leg}</div><div class="tc-chart" style="min-height:0">{svg}</div>'
     else:
-        tx="var(--tx)"; mu="var(--mut)"; a="var(--ref)"; b="var(--car)"; hi="var(--or)"; grid="var(--grid)"
-        wrap=lambda t,sub,svg,leg: f'<div class="card"><h2>{t}</h2><p class="cap">{sub}</p>{svg}<div class="leg">{leg}</div></div>'
-        sw=lambda c,n: f'<span><i style="background:{c}"></i>{n}</span>'
-        outer=lambda x: x
-    # grafico 1: erro por classe
-    nomes=[("Automóveis","carros"),("Motos","motos"),("Pesados","pesados")]
-    linhas=[(n,E_cls[k],f"{C1[k]} × {C2[k]}") for n,k in nomes]+[("Total",E_tot,f"{T1} × {T2}")]
-    sc=30.0  # px por 1%
-    s1=f'<svg viewBox="0 0 560 230" role="img" aria-label="Erro percentual por classe e no total" style="width:100%;height:auto;display:block;font-family:inherit">'
+        tx="var(--tx)"; mu="var(--mut)"; grid="var(--grid)"
+        wrap=lambda svg,leg: f'<div class="leg" style="margin:10px 0 0">{leg}</div>{svg}'
+    cores=[("Automóveis","carros","#338ced"),("Motos","motos","#e76624"),("Pesados","pesados","#00a888")]
+    cols=[(n,E_cls[k],f"{C1[k]} × {C2[k]}",c) for n,k,c in cores]+[("Total",E_tot,f"{T1} × {T2}","#e49c06")]
+    H=96.0; mx=12.0; base=118
+    svg=f'<svg viewBox="0 0 560 176" role="img" aria-label="Erro percentual por classe e no total" style="width:100%;height:auto;display:block;font-family:inherit">'
     for g in (0,5,10):
-        x=130+g*sc
-        s1+=f'<line x1="{x}" x2="{x}" y1="14" y2="196" stroke="{grid}"/><text x="{x}" y="214" text-anchor="middle" font-size="11" fill="{mu}">{g}%</text>'
-    for i,(n,e,sub) in enumerate(linhas):
-        y=24+i*44; col=hi if n=="Total" else b
-        s1+=f'<text x="0" y="{y+17}" font-size="12" fill="{tx}" font-weight="{600 if n=="Total" else 400}">{n}</text>'
-        s1+=f'<rect x="130" y="{y}" width="{e*sc:.1f}" height="26" rx="3" fill="{col}"><title>{n}: {f1(e)}% (folha × recontagem: {sub})</title></rect>'
-        s1+=f'<text x="{130+e*sc+8:.1f}" y="{y+17}" font-size="12" fill="{tx}">{f1(e)}%  <tspan fill="{mu}">({sub})</tspan></text>'
-    s1+='</svg>'
-    g1=wrap("Erro por classe","Erro = |C1 − C2| ÷ C2; entre parênteses, folha × recontagem",s1,sw(b,"Classe")+sw(hi,"Total do bloco"))
-    # grafico 2: C1 x C2
-    s2=f'<svg viewBox="0 0 560 230" role="img" aria-label="Folha e recontagem por classe" style="width:100%;height:auto;display:block;font-family:inherit">'
-    H=150.0; mx=600.0
-    for g in (0,200,400,600):
-        y=190-g/mx*H
-        s2+=f'<line x1="40" x2="548" y1="{y:.1f}" y2="{y:.1f}" stroke="{grid}"/><text x="34" y="{y+4:.1f}" text-anchor="end" font-size="11" fill="{mu}">{g}</text>'
-    for i,(n,k) in enumerate(nomes):
-        gx=70+i*165
-        for j,(v,col,lab) in enumerate(((C1[k],a,"folha"),(C2[k],b,"recontagem"))):
-            h=v/mx*H; x=gx+j*62
-            s2+=f'<rect x="{x}" y="{190-h:.1f}" width="52" height="{max(h,1.5):.1f}" rx="3" fill="{col}"><title>{n}, {lab}: {v}</title></rect><text x="{x+26}" y="{190-h-6:.1f}" text-anchor="middle" font-size="12" fill="{tx}">{v}</text>'
-        s2+=f'<text x="{gx+57}" y="212" text-anchor="middle" font-size="12" fill="{tx}">{n}</text>'
-    s2+='</svg>'
-    g2=wrap("Folha × recontagem","Veículos no bloco 28/10 17:30–17:45, por classe",s2,sw(a,"C1: folha")+sw(b,"C2: recontagem"))
-    return outer(g1+g2)
+        y=base-g/mx*H
+        svg+=f'<line x1="36" x2="552" y1="{y:.1f}" y2="{y:.1f}" stroke="{grid}"/><text x="30" y="{y+4:.1f}" text-anchor="end" font-size="11" fill="{mu}">{g}%</text>'
+    for i,(n,e,sub,c) in enumerate(cols):
+        x=60+i*128; h=e/mx*H
+        svg+=f'<rect x="{x}" y="{base-h:.1f}" width="84" height="{h:.1f}" rx="4" fill="{c}"><title>{n}: erro de {f1(e)}% (folha × recontagem: {sub})</title></rect>'
+        svg+=f'<text x="{x+42}" y="{base-h-6:.1f}" text-anchor="middle" font-size="13" font-weight="600" fill="{tx}">{f1(e)}%</text>'
+        svg+=f'<text x="{x+42}" y="{base+17}" text-anchor="middle" font-size="12" fill="{tx}">{n}</text>'
+        svg+=f'<text x="{x+42}" y="{base+33}" text-anchor="middle" font-size="11" fill="{mu}">{sub}</text>'
+    svg+='</svg>'
+    leg="".join(f'<span><i style="background:{c}"></i>{n}</span>' for n,_,c in [(a,b,c) for a,b,c in cores]+[("Total do bloco","","#e49c06")])
+    return wrap(svg,leg)
 
 def conteudo(estilo):
     # estilo 'art' (painel Claude) ou 'gh' (site GitHub)
@@ -486,14 +464,11 @@ def conteudo(estilo):
     sec2=card("Recontagem por trecho de 3 minutos","Cada trecho foi recontado nos vídeos em câmera lenta",
         scroll(table(["Dia","Trecho","Automóveis","Motos","Pesados","Total","Entra no erro?"],tr_rows,2))+
         note("A contagem original foi anotada por bloco de 15 minutos, então só o bloco 28/10 17:30–17:45 (5 trechos seguidos) pode ser comparado. Os trechos de 27/10 e 29/10 não têm C1 e servem só como ordem de grandeza."))
-    sec3=card("Correção da folha do bloco 28/10 17:30","Por que o erro caiu de 54,3% para 5,1%",
-        scroll(table(["Folha","Automóveis","Motos","Pesados","Total","Erro contra C2 (777)"],cmp_rows,1))+
-        note("A primeira comparação usou 806 carros e 384 motos, e o erro dava 54,3%. A folha de campo correta tem 576 carros, 232 motos e 9 pesados (817 veículos), e o erro cai para 5,1%. Todos os números do painel, do TCC e das planilhas usam a folha correta."))
     sec4=card("Como o trecho foi escolhido","Sorteio com semente fixa, para poder repetir",
         note("Foram sorteados 20 trechos de 3 minutos por hora, 1 por dia, com semente 20261115 e sem repetir o trecho já recontado (28/10, 18:00–18:15). Cada dia recebeu um trecho. No dia 28, o trecho sorteado foi estendido para todo o bloco 17:30–17:45 para poder comparar com a folha."))
     sec5=card("Como ler o resultado","Limites da comparação",
         note("O erro mede a diferença entre duas contagens e não diz qual das duas é a verdadeira. É um bloco só, e a diferença de pesados (1 veículo) pesa pouco. Em ordem de grandeza, um erro de 5,1% no fluxo muda o grau de saturação X do bloco 17:30 de 0,56 para algo entre 0,53 e 0,59, e o X da hora de 28/10 de 0,86 para algo entre 0,82 e 0,91 (fator de moto 0,33). Em nenhum desses casos o X ultrapassa 1."))
-    return visao, sec1+sec2+sec3+sec4+sec5
+    return visao, sec1+sec2+sec4+sec5
 
 
 def pagina():
