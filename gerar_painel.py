@@ -101,17 +101,17 @@ def secao_documentos():
 # SIMULAÇÃO NO VISSIM (dia 28/10, sentido Centro, só a faixa marcada no modelo)
 # (cenário, verde SG2 em s, bloco, demanda em veíc./h, fila média em m, fila máxima em m,
 #  paradas na fila, atraso em s/veíc., paradas por veículo, velocidade em km/h)
-# Médias de 10 rodadas (sementes 42 a 51), medidas de 148 s a 600 s. None = não registrado.
+# Médias de 10 rodadas (sementes 42 a 51), medidas de 148 s a 600 s.
 # --------------------------------------------------------------------------
 SIMULACAO = [
-("C0 – plano atual", 125, "17:30–17:45", 3268, 7.7, 77.4, 90, None, None, None),
-("C0 – plano atual", 125, "17:45–18:00", 5212, 48.7, 264.0, 243, None, None, None),
-("C0 – plano atual", 125, "18:00–18:15", 5888, 44.4, 255.2, 238, 8.64, 0.37, 47.78),
-("C0 – plano atual", 125, "18:15–18:30", 5668, 52.6, 296.7, 245, 8.65, 0.38, 47.81),
-("C1 – verde +6 s", 131, "18:00–18:15", 5888, 19.9, 179.1, 149, 4.77, 0.22, 53.41),
-("C1 – verde +6 s", 131, "18:15–18:30", 5668, 19.6, 177.2, 147, 4.82, 0.22, 53.33),
-("C2 – verde +12 s", 137, "18:00–18:15", 5888, 4.0, 76.4, 61, 2.35, 0.07, 57.51),
-("C2 – verde +12 s", 137, "18:15–18:30", 5668, 4.8, 87.7, 65, 2.4, 0.07, 57.42),
+('C0 – plano atual', 125, '17:30–17:45', 3268, 7.7, 77.4, 90, 4.1, 0.18, 54.5),
+('C0 – plano atual', 125, '17:45–18:00', 5212, 93.0, 312.1, 377, 12.1, 0.59, 43.8),
+('C0 – plano atual', 125, '18:00–18:15', 5888, 131.7, 320.1, 473, 19.2, 0.75, 36.6),
+('C0 – plano atual', 125, '18:15–18:30', 5668, 121.7, 320.3, 457, 16.8, 0.82, 38.8),
+('C1 – verde +6 s', 131, '18:00–18:15', 5888, 103.9, 317.8, 417, 12.5, 0.59, 43.4),
+('C1 – verde +6 s', 131, '18:15–18:30', 5668, 87.1, 316.6, 362, 10.7, 0.55, 45.4),
+('C2 – verde +12 s', 137, '18:00–18:15', 5888, 47.6, 282.4, 229, 6.4, 0.28, 51.0),
+('C2 – verde +12 s', 137, '18:15–18:30', 5668, 31.3, 239.0, 171, 5.8, 0.24, 52.0),
 ]
 
 def secao_simulacao():
@@ -127,7 +127,7 @@ def secao_simulacao():
 <p class="cap">Dia 28/10, sentido Centro, só a faixa marcada no modelo. Cada bloco de 15 minutos foi simulado separadamente, com 10 rodadas (sementes 42 a 51), medindo de 148 s a 600 s. Médias das rodadas.</p>
 <div class="tw"><table class="sim"><thead><tr><th>Cenário</th><th>Verde (s)</th><th>Bloco</th><th>Demanda (veíc./h)</th><th>Fila média (m)</th><th>Fila máxima (m)</th><th>Paradas na fila</th><th>Atraso (s/veíc.)</th><th>Paradas por veíc.</th><th>Velocidade (km/h)</th></tr></thead>
 <tbody>{linhas_sim}</tbody></table></div>
-<p class="note">Limites: o Vissim Student encerra cada rodada em 600 s, então a medição cobre cerca de 3 ciclos (o primeiro é descartado). A fila máxima chega perto de 320 m, limite do contador. Motos entram como veículos de uma faixa só, sem circular entre carros. O bloco 17:30–17:45 do plano atual (817 veículos, 3.268 veíc./h) tem demanda menor e não satura: fila máxima de cerca de 77 m. Nos blocos 1 e 2 do plano atual só a fila foi registrada; atraso e velocidade ficam em branco. Nos cenários C1 e C2 só a fase do sentido Centro mudou (o verde dos outros movimentos não foi deslocado).</p></div>
+<p class="note">Limites: o Vissim Student encerra cada rodada em 600 s, então a medição cobre cerca de 3 ciclos (o primeiro é descartado). A fila máxima chega perto de 320 m, limite do contador. Motos entram como veículos de uma faixa só, sem circular entre carros. O bloco 17:30–17:45 do plano atual (817 veículos, 3.268 veíc./h) tem demanda menor e não satura: fila máxima de cerca de 77 m. Quando a fila máxima fica perto de 320 m, fila média e máxima são limites inferiores. Nos cenários C1 e C2 só a fase do sentido Centro mudou (o verde dos outros movimentos não foi deslocado).</p></div>
 """
 
 # --------------------------------------------------------------------------
