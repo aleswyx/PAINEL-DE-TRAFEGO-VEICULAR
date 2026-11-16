@@ -104,7 +104,7 @@ def secao_documentos():
 # Médias de 10 rodadas (sementes 42 a 51), medidas de 148 s a 600 s. None = não registrado.
 # --------------------------------------------------------------------------
 SIMULACAO = [
-("C0 – plano atual", 125, "17:30–17:45*", 4796, 42.0, 255.5, 234, None, None, None),
+("C0 – plano atual", 125, "17:30–17:45", 3268, 7.7, 77.4, 90, None, None, None),
 ("C0 – plano atual", 125, "17:45–18:00", 5212, 48.7, 264.0, 243, None, None, None),
 ("C0 – plano atual", 125, "18:00–18:15", 5888, 44.4, 255.2, 238, 8.64, 0.37, 47.78),
 ("C0 – plano atual", 125, "18:15–18:30", 5668, 52.6, 296.7, 245, 8.65, 0.38, 47.81),
@@ -127,7 +127,7 @@ def secao_simulacao():
 <p class="cap">Dia 28/10, sentido Centro, só a faixa marcada no modelo. Cada bloco de 15 minutos foi simulado separadamente, com 10 rodadas (sementes 42 a 51), medindo de 148 s a 600 s. Médias das rodadas.</p>
 <div class="tw"><table class="sim"><thead><tr><th>Cenário</th><th>Verde (s)</th><th>Bloco</th><th>Demanda (veíc./h)</th><th>Fila média (m)</th><th>Fila máxima (m)</th><th>Paradas na fila</th><th>Atraso (s/veíc.)</th><th>Paradas por veíc.</th><th>Velocidade (km/h)</th></tr></thead>
 <tbody>{linhas_sim}</tbody></table></div>
-<p class="note">Limites: o Vissim Student encerra cada rodada em 600 s, então a medição cobre cerca de 3 ciclos (o primeiro é descartado). A fila máxima chega perto de 320 m, limite do contador. Motos entram como veículos de uma faixa só, sem circular entre carros. *O bloco 17:30–17:45 do plano atual foi simulado com demanda de 4.796 veíc./h; com a contagem conferida a demanda é 3.268 veíc./h, então esse bloco precisa ser simulado de novo. Nos blocos 1 e 2 do plano atual só a fila foi registrada; atraso e velocidade ficam em branco. Nos cenários C1 e C2 só a fase do sentido Centro mudou (o verde dos outros movimentos não foi deslocado).</p></div>
+<p class="note">Limites: o Vissim Student encerra cada rodada em 600 s, então a medição cobre cerca de 3 ciclos (o primeiro é descartado). A fila máxima chega perto de 320 m, limite do contador. Motos entram como veículos de uma faixa só, sem circular entre carros. O bloco 17:30–17:45 do plano atual (817 veículos, 3.268 veíc./h) tem demanda menor e não satura: fila máxima de cerca de 77 m. Nos blocos 1 e 2 do plano atual só a fila foi registrada; atraso e velocidade ficam em branco. Nos cenários C1 e C2 só a fase do sentido Centro mudou (o verde dos outros movimentos não foi deslocado).</p></div>
 """
 
 # --------------------------------------------------------------------------
